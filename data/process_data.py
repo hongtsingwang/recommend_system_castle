@@ -1,14 +1,20 @@
 # coding=utf-8
 
+import os
+import random
+import numpy as np
+from collections import defaultdict
+
+
 def process_data(
-        negative_sample_ratio=1,
-        negative_sample_threshold=0,
-        negative_sample_method='random',
-        split_test_ratio=0.4,
-        shuffle_before_split=True,
-        split_ensure_positive=False,
-        topk_sample_user=300
-    ):
+    negative_sample_ratio=1,
+    negative_sample_threshold=0,
+    negative_sample_method='random',
+    split_test_ratio=0.4,
+    shuffle_before_split=True,
+    split_ensure_positive=False,
+    topk_sample_user=300
+):
     '''
     description: 对测试集输入数据进行处理， 输出为模型认识的数据类型
     :param negative_sample_ratio: 负样本采样比例，如1代表正负样本比例1:1, 10代表正负样本1:10, 0代表不需要负样本
@@ -22,14 +28,189 @@ def process_data(
     # 读取输入数据
     dataset = read_from_input_data()
     # 根据movie lens数据， 制作负样本
-    data = generate_negative_sample(dataset, negative_sample_ratio, negative_sample_threshold, negative_sample_method)
+    data = generate_negative_sample(
+        dataset, negative_sample_ratio, negative_sample_threshold, negative_sample_method)
     # 数据处理, 稀疏值处理等
-    data, n_user, n_item, _, _ = neaten_id(data)
+    data, user_num, item_num, _, _ = neaten_id(data)
     # 划分训练集和样本集
-    train_data, test_data = train_test_split(data, split_test_ratio, shuffle_before_split, split_ensure_positive)
-    
-    
+    train_data, test_data = train_test_split(
+        data, split_test_ratio, shuffle_before_split, split_ensure_positive)
+    # TODO topk_data作用未知
+    test_user_item_set, test_user_positive_item_set = prepare_topk(train_data, test_data,
+                             user_num, item_num, topk_sample_user)
+    return user_num, item_num, train_data, test_data, test_user_item_set, test_user_positive_item_set
 
 
 def read_from_input_data():
-    pass
+    data_dir_path = os.getcwd()
+    movie_lens_20m_data = os.path.join(data_dir_path, "data_set", "ml_20m")
+    data_sets = list()
+    # user_set = set()
+    # item_set = set()
+    with open(movie_lens_20m_data, "r") as f:
+        for line in f:
+            line_list = line.strip().split(",")
+            # 将string类型转换为int类型
+            # line_list 一共4列， 分别为user_id, item_id, rating, time_stamp
+            line_list = [int(x) for x in line_list]
+            user_id, item_id, rating, time_stamp = line_list
+            # user_set.add(user_id)
+            # item_set.add(item_id)
+            data_sets.append(line_list)
+    # return data, user_set, item_set
+    return data_sets
+
+
+def generate_negative_sample(dataset, negative_sample_ratio, negative_sample_threshold, negative_sample_method):
+    '''
+    description: 基于输入数据， 构造负样本
+    param {*}
+    return {*}
+    '''
+    if not negative_sample_ratio:
+        # 所有数据均为正样本， 以正样本形式输出
+        dataset = [(d[0], d[1], 1) for d in dataset]  # 变成隐反馈数据
+        return dataset
+
+    item_set = set([i[1] for i in dataset])
+    if negative_sample_method == "random":
+        negative_sample_weight_dict = defaultdict(1)
+        negative_sample_weight_dict.fromkeys(item_set)
+    elif negative_sample_method == "popular":
+        negative_sample_weight_dict = defaultdict(0)
+        for data in dataset:
+            item_id = data[1]
+            negative_sample_weight_dict[item_id] += 1
+    else:
+        raise ValueError(
+            f"negative_sample_method参数配置'{negative_sample_method}'错误，必须为popular或者random之一")
+
+    # 得到每个用户正样本与非正样本集合
+    # 正样本之外的内容， 只能说是非正样本， 不能说是负样本， 只是打分偏低， 但这个阈值目前没有确定
+    user_positive_dict, user_unpositive_dict = defaultdict(
+        set), defaultdict(set)
+
+    for data in dataset:
+        user_id, item_id, rating = data
+        if rating > negative_sample_threshold:
+            user_positive_dict[user_id].add(item_id)
+        else:
+            user_unpositive_dict[user_id].add(item_id)
+
+    user_list = list(user_positive_dict.keys())
+    positive_items_set = [user_positive_dict[user_id] for user_id in user_list]
+    unpositive_items_set = [user_unpositive_dict[user_id]
+                            for user_id in user_list]
+    negative_sample_list = _negative_sample(
+        item_set, positive_items_set, unpositive_items_set, negative_sample_ratio, negative_sample_weight_dict)
+    
+    new_data_set = []
+    for user_id, negative_item_lists in zip(user_list, negative_sample_list):
+        for item_id in negative_item_lists:
+            new_data_set.append((user_id, item_id, 0))
+    
+    for user_id, positive_items in positive_items_set.items():
+        for item_id in positive_items:
+            new_data_set.append((user_id, item_id, 1))
+    return new_data_set
+
+
+def _negative_sample(item_set, positive_items_set, unpositive_items_set, negative_sample_ratio, negative_sample_weight_dict):
+    '''
+    description: 
+    param {*}
+    return {*}
+    '''
+    # 可以取负样例的物品id列表, TODO 这里需要再深入理解一下
+    valid_negative_list = list(
+        item_set - positive_items_set - unpositive_items_set)
+    # 采集负样例数量
+    n_negative_sample = min(
+        int(len(positive_items_set) * negative_sample_ratio), len(valid_negative_list))
+    if n_negative_sample <= 0:
+        return []
+
+    negative_sample_weight_list = [
+        negative_sample_weight_dict[item_id] for item_id in valid_negative_list]
+    weights = np.array(negative_sample_weight_list, dtype=np.float)
+    # 对权重归一化
+    weights /= weights.sum()
+    # 采集n_negative_sample个负样例（通过下标采样是为了防止物品id类型从int或str变成np.int或np.str）
+    sample_indices = np.random.choice(
+        range(len(valid_negative_list)), n_negative_sample, False, weights)
+    return [valid_negative_list[i] for i in sample_indices]
+
+
+def neaten_id(data):
+    # 进行ID处理
+    new_data = []
+    user_num, item_num = 0, 0
+    user_id_old2new, item_id_old2new = {}, {}
+    for user_id_old, item_id_old, label in data:
+        if user_id_old not in user_id_old2new:
+            user_id_old2new[user_id_old] = user_num
+            user_num += 1
+        if item_id_old not in item_id_old2new:
+            item_id_old2new[item_id_old] = item_num
+            item_num += 1
+        new_data.append((user_id_old2new[user_id_old], item_id_old2new[item_id_old], label))
+    return new_data, user_num, item_num, user_id_old2new, item_id_old2new
+
+
+def train_test_split(data, test_ratio=0.4, shuffle=True, ensure_positive=False):
+    """
+    将数据切分为训练集数据和测试集数据
+    :param data: 原数据，第一列为用户id，第二列为物品id，第三列为标签
+    :param test_ratio: 测试集数据占比，这个值在0和1之间
+    :param shuffle: 是否对原数据随机排序
+    :param ensure_positive: 是否确保训练集每个用户都有正样例
+    :return: 训练集数据和测试集数据
+    """
+    if shuffle:
+        random.shuffle(data)
+    n_test = int(len(data) * test_ratio)
+    test_data, train_data = data[:n_test], data[n_test:]
+
+    if ensure_positive:
+        user_set = {d[0] for d in data} - {user_id for user_id, _, label in train_data if label == 1}
+        if len(user_set) > 0:
+            print('警告：为了确保训练集数据每个用户都有正样例，%d(%f%%)条数据从测试集随机插入训练集'
+                  % (len(user_set), 100 * len(user_set) / len(data)))
+
+        i = len(test_data) - 1
+        while len(user_set) > 0:
+            assert i >= 0, '无法确保训练集每个用户都有正样例，因为存在没有正样例的用户：' + str(user_set)
+            if test_data[i][0] in user_set and test_data[i][2] == 1:
+                user_set.remove(test_data[i][0])
+                train_data.insert(random.randint(0, len(train_data)), test_data.pop(i))
+            i -= 1
+    return train_data, test_data
+
+
+def prepare_topk(train_data, test_data,
+                 n_user: int, n_item: int, n_sample_user=None):
+    """
+    准备用于topk评估的数据
+    :param train_data: 训练集数据，有三列，分别是user_id, item_id, label
+    :param test_data: 测试集数据，有三列，分别是user_id, item_id, label
+    :param n_user: 用户数量
+    :param n_item: 物品数量
+    :param n_sample_user: 用户取样数量，为None则表示采样所有用户
+    :return: 用于topk评估的数据，类型为TopkData，其包括在测试集里每个用户的（可推荐物品集合）与（有行为物品集合）
+    """
+    if n_sample_user is None or n_sample_user > n_user:
+        n_sample_user = n_user
+
+    user_set = np.random.choice(range(n_user), n_sample_user, False)
+
+    def get_user_item_set(data, only_positive=False):
+        user_item_set = {user_id: set() for user_id in user_set}
+        for user_id, item_id, label in data:
+            if user_id in user_set and (not only_positive or label == 1):
+                user_item_set[user_id].add(item_id)
+        return user_item_set
+
+    test_user_item_set = {user_id: set(range(n_item)) - item_set
+                          for user_id, item_set in get_user_item_set(train_data).items()}
+    test_user_positive_item_set = get_user_item_set(test_data, only_positive=True)
+    return test_user_item_set, test_user_positive_item_set
