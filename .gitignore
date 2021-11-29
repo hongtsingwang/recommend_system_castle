@@ -130,3 +130,6 @@ dmypy.json
 
 # vs code
 .vscode
+
+# 输入文件
+ml_20m
