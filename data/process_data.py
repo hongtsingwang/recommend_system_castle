@@ -3,10 +3,13 @@
 import os
 import random
 import numpy as np
+
+from tqdm import tqdm
 from collections import defaultdict
 
 
 def process_data(
+    input_file_path,
     negative_sample_ratio=1,
     negative_sample_threshold=0,
     negative_sample_method='random',
@@ -17,6 +20,7 @@ def process_data(
 ):
     '''
     description: 对测试集输入数据进行处理， 输出为模型认识的数据类型
+    :param input_file_path: 数据输入文件路径
     :param negative_sample_ratio: 负样本采样比例，如1代表正负样本比例1:1, 10代表正负样本1:10, 0代表不需要负样本
     :param negative_sample_threshold: 负采样的权重阈值，权重大于或者等于此值为正样例，小于此值既不是正样例也不是负样例
     :param negative_sample_method: 负采样方法，值为'random'或'popular'
@@ -26,7 +30,7 @@ def process_data(
     :return: 用户数量，物品数量，训练集，测试集，用于TopK评估数据
     '''
     # 读取输入数据
-    dataset = read_from_input_data()
+    dataset = read_from_input_data(input_file_path)
     # 根据movie lens数据， 制作负样本
     data = generate_negative_sample(
         dataset, negative_sample_ratio, negative_sample_threshold, negative_sample_method)
@@ -41,22 +45,24 @@ def process_data(
     return user_num, item_num, train_data, test_data, test_user_item_set, test_user_positive_item_set
 
 
-def read_from_input_data():
-    data_dir_path = os.getcwd()
-    movie_lens_20m_data = os.path.join(data_dir_path, "data_set", "ml_20m")
+def read_from_input_data(input_file_path):
     data_sets = list()
     # user_set = set()
     # item_set = set()
-    with open(movie_lens_20m_data, "r") as f:
-        for line in f:
+    with open(input_file_path, "r") as f:
+        for line in tqdm(f):
             line_list = line.strip().split(",")
             # 将string类型转换为int类型
             # line_list 一共4列， 分别为user_id, item_id, rating, time_stamp
-            line_list = [int(x) for x in line_list]
             user_id, item_id, rating, time_stamp = line_list
+            user_id = int(user_id)
+            item_id = int(item_id)
+            rating = float(rating)
+            user_item_info = (user_id, item_id, rating, time_stamp)
+            # line_list = [int(x) for x in line_list]
             # user_set.add(user_id)
             # item_set.add(item_id)
-            data_sets.append(line_list)
+            data_sets.append(user_item_info)
     # return data, user_set, item_set
     return data_sets
 

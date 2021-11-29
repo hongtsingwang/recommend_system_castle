@@ -1,6 +1,13 @@
 # coding = utf-8
 
-from process_data import generate_negative_sample
+import os
+from process_data import process_data
+
+
+# 数据路径
+current_dir = os.getcwd()
+input_dir = os.path.join(current_dir, "..", "input")
+ratings_file_path = os.path.join(input_dir, "ml-20m", "ratings.csv")
 
 # 参数配置, 当前所有参数都是随便拍的
 negative_sample_ratio = 3.0
@@ -12,7 +19,8 @@ split_ensure_positive = True
 topk_sample_user = 1000
 
 
-dataset = generate_negative_sample(
+dataset = process_data(
+        ratings_file_path,
         negative_sample_ratio,
         negative_sample_threshold,
         negative_sample_method,
