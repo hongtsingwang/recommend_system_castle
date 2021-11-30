@@ -47,23 +47,17 @@ def process_data(
 
 def read_from_input_data(input_file_path):
     data_sets = list()
-    # user_set = set()
-    # item_set = set()
     with open(input_file_path, "r") as f:
         for line in tqdm(f):
             line_list = line.strip().split(",")
             # 将string类型转换为int类型
             # line_list 一共4列， 分别为user_id, item_id, rating, time_stamp
-            user_id, item_id, rating, time_stamp = line_list
+            user_id, item_id, rating, _ = line_list
             user_id = int(user_id)
             item_id = int(item_id)
             rating = float(rating)
             user_item_info = (user_id, item_id, rating)
-            # line_list = [int(x) for x in line_list]
-            # user_set.add(user_id)
-            # item_set.add(item_id)
             data_sets.append(user_item_info)
-    # return data, user_set, item_set
     return data_sets
 
 
@@ -78,7 +72,11 @@ def generate_negative_sample(dataset, negative_sample_ratio, negative_sample_thr
         dataset = [(d[0], d[1], 1) for d in dataset]  # 变成隐反馈数据
         return dataset
 
+    # 输出rating文件中有记录的item列表
     item_set = set([i[1] for i in dataset])
+    print(f"文件中有记录的item数量为{len(item_set)}个")
+    # 定义每个item的权重， 对random模式， 每个item的权重都是1
+    # 对popular模式， item出现频率越高， item权重越高
     if negative_sample_method == "random":
         negative_sample_weight_dict = defaultdict(lambda: 1)
         negative_sample_weight_dict.fromkeys(item_set)
@@ -93,9 +91,11 @@ def generate_negative_sample(dataset, negative_sample_ratio, negative_sample_thr
 
     # 得到每个用户正样本与非正样本集合
     # 正样本之外的内容， 只能说是非正样本， 不能说是负样本， 只是打分偏低， 但这个阈值目前没有确定
+    # key为用户ID， value为样本set
     user_positive_dict, user_unpositive_dict = defaultdict(
         set), defaultdict(set)
 
+    # 整合数据
     for data in tqdm(dataset):
         user_id, item_id, rating = data
         if rating > negative_sample_threshold:
@@ -103,52 +103,57 @@ def generate_negative_sample(dataset, negative_sample_ratio, negative_sample_thr
         else:
             user_unpositive_dict[user_id].add(item_id)
 
+    # 取有正样本的用户的集合
     user_list = list(user_positive_dict.keys())
-    positive_items_set = set([user_positive_dict[user_id] for user_id in user_list])
-    unpositive_items_set = set([user_unpositive_dict[user_id]
-                            for user_id in user_list])
+
+    # 获取每个用户对应的负样本
     negative_sample_list = _negative_sample(
-        item_set, positive_items_set, unpositive_items_set, negative_sample_ratio, negative_sample_weight_dict)
+        item_set, user_list, user_positive_dict, user_unpositive_dict, negative_sample_ratio, negative_sample_weight_dict)
     
     new_data_set = []
     for user_id, negative_item_lists in tqdm(zip(user_list, negative_sample_list)):
         for item_id in negative_item_lists:
             new_data_set.append((user_id, item_id, 0))
     
-    for user_id, positive_items in tqdm(positive_items_set.items()):
-        for item_id in positive_items:
+    for user_id, positive_item_list in tqdm(user_positive_dict.items()):
+        for item_id in positive_item_list:
             new_data_set.append((user_id, item_id, 1))
     return new_data_set
 
 
-def _negative_sample(item_set, positive_items_set, unpositive_items_set, negative_sample_ratio, negative_sample_weight_dict):
+def _negative_sample(item_set, user_list, user_positive_dict, user_unpositive_dict, negative_sample_ratio, negative_sample_weight_dict):
     '''
     description: 
     param {*}
     return {*}
     '''
     # 可以取负样例的物品id列表, TODO 这里需要再深入理解一下
-    valid_negative_list = list(
-        item_set - positive_items_set - unpositive_items_set)
-    # 采集负样例数量
-    n_negative_sample = min(
-        int(len(positive_items_set) * negative_sample_ratio), len(valid_negative_list))
-    if n_negative_sample <= 0:
-        return []
-
-    negative_sample_weight_list = [
-        negative_sample_weight_dict[item_id] for item_id in valid_negative_list]
-    weights = np.array(negative_sample_weight_list, dtype=np.float)
-    # 对权重归一化
-    weights /= weights.sum()
-    # 采集n_negative_sample个负样例（通过下标采样是为了防止物品id类型从int或str变成np.int或np.str）
-    sample_indices = np.random.choice(
-        range(len(valid_negative_list)), n_negative_sample, False, weights)
-    return [valid_negative_list[i] for i in sample_indices]
+    user_negative_list = []
+    for user in tqdm(user_list):
+        user_positive_set = user_positive_dict[user]
+        user_unpositive_set = user_unpositive_dict[user]
+        candidate_negative_list = list(item_set - user_positive_set - user_unpositive_set)
+        negative_sample_num = min(
+            int(len(user_positive_set) * negative_sample_ratio), len(candidate_negative_list)
+        )
+        if negative_sample_num <= 0:
+            return []
+        negative_sample_weight_list = [
+            negative_sample_weight_dict[item_id] for item_id in candidate_negative_list]
+        weights = np.array(negative_sample_weight_list, dtype=np.float)
+        # 对权重归一化
+        weights /= weights.sum()
+        # 采集n_negative_sample个负样例（通过下标采样是为了防止物品id类型从int或str变成np.int或np.str）
+        sample_indices = np.random.choice(
+            range(len(negative_sample_weight_list)), negative_sample_num, False, weights)
+        sample_result = [candidate_negative_list[i] for i in sample_indices]
+        # print("sample indices is:", sample_indices)
+        user_negative_list.append(sample_result)
+    return user_negative_list
 
 
 def neaten_id(data):
-    # 进行ID处理
+    # 虽然每个用户有自己的user_id, 但现在因为有部分user_id不参与模型训练， 需要对用户重新进行编号
     new_data = []
     user_num, item_num = 0, 0
     user_id_old2new, item_id_old2new = {}, {}
