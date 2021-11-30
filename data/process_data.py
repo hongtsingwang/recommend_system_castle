@@ -58,7 +58,7 @@ def read_from_input_data(input_file_path):
             user_id = int(user_id)
             item_id = int(item_id)
             rating = float(rating)
-            user_item_info = (user_id, item_id, rating, time_stamp)
+            user_item_info = (user_id, item_id, rating)
             # line_list = [int(x) for x in line_list]
             # user_set.add(user_id)
             # item_set.add(item_id)
@@ -80,11 +80,11 @@ def generate_negative_sample(dataset, negative_sample_ratio, negative_sample_thr
 
     item_set = set([i[1] for i in dataset])
     if negative_sample_method == "random":
-        negative_sample_weight_dict = defaultdict(1)
+        negative_sample_weight_dict = defaultdict(lambda: 1)
         negative_sample_weight_dict.fromkeys(item_set)
     elif negative_sample_method == "popular":
-        negative_sample_weight_dict = defaultdict(0)
-        for data in dataset:
+        negative_sample_weight_dict = defaultdict(lambda: 0)
+        for data in tqdm(dataset):
             item_id = data[1]
             negative_sample_weight_dict[item_id] += 1
     else:
@@ -96,7 +96,7 @@ def generate_negative_sample(dataset, negative_sample_ratio, negative_sample_thr
     user_positive_dict, user_unpositive_dict = defaultdict(
         set), defaultdict(set)
 
-    for data in dataset:
+    for data in tqdm(dataset):
         user_id, item_id, rating = data
         if rating > negative_sample_threshold:
             user_positive_dict[user_id].add(item_id)
@@ -104,18 +104,18 @@ def generate_negative_sample(dataset, negative_sample_ratio, negative_sample_thr
             user_unpositive_dict[user_id].add(item_id)
 
     user_list = list(user_positive_dict.keys())
-    positive_items_set = [user_positive_dict[user_id] for user_id in user_list]
-    unpositive_items_set = [user_unpositive_dict[user_id]
-                            for user_id in user_list]
+    positive_items_set = set([user_positive_dict[user_id] for user_id in user_list])
+    unpositive_items_set = set([user_unpositive_dict[user_id]
+                            for user_id in user_list])
     negative_sample_list = _negative_sample(
         item_set, positive_items_set, unpositive_items_set, negative_sample_ratio, negative_sample_weight_dict)
     
     new_data_set = []
-    for user_id, negative_item_lists in zip(user_list, negative_sample_list):
+    for user_id, negative_item_lists in tqdm(zip(user_list, negative_sample_list)):
         for item_id in negative_item_lists:
             new_data_set.append((user_id, item_id, 0))
     
-    for user_id, positive_items in positive_items_set.items():
+    for user_id, positive_items in tqdm(positive_items_set.items()):
         for item_id in positive_items:
             new_data_set.append((user_id, item_id, 1))
     return new_data_set
