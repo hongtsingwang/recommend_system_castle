@@ -9,6 +9,8 @@ current_dir = os.getcwd()
 input_dir = os.path.join(current_dir, "..", "input")
 ratings_file_path = os.path.join(input_dir, "ml-20m", "ratings.csv")
 
+output_file_path = os.path.join()
+
 # 参数配置, 当前所有参数都是随便拍的
 negative_sample_ratio = 3.0
 negative_sample_threshold = 0.5

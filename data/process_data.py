@@ -157,7 +157,7 @@ def neaten_id(data):
     new_data = []
     user_num, item_num = 0, 0
     user_id_old2new, item_id_old2new = {}, {}
-    for user_id_old, item_id_old, label in data:
+    for user_id_old, item_id_old, label in tqdm(data):
         if user_id_old not in user_id_old2new:
             user_id_old2new[user_id_old] = user_num
             user_num += 1
@@ -183,6 +183,7 @@ def train_test_split(data, test_ratio=0.4, shuffle=True, ensure_positive=False):
     test_data, train_data = data[:n_test], data[n_test:]
 
     if ensure_positive:
+        # 所有用户ID列表 - 有正样本的用户ID列表
         user_set = {d[0] for d in data} - {user_id for user_id, _, label in train_data if label == 1}
         if len(user_set) > 0:
             print('警告：为了确保训练集数据每个用户都有正样例，%d(%f%%)条数据从测试集随机插入训练集'
