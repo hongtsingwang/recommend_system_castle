@@ -16,7 +16,7 @@ def process_data(
     split_test_ratio=0.4,
     shuffle_before_split=True,
     split_ensure_positive=False,
-    topk_sample_user=300
+    topk_sample_user=None
 ):
     '''
     description: 对测试集输入数据进行处理， 输出为模型认识的数据类型
@@ -147,7 +147,6 @@ def _negative_sample(item_set, user_list, user_positive_dict, user_unpositive_di
         sample_indices = np.random.choice(
             range(len(negative_sample_weight_list)), negative_sample_num, False, weights)
         sample_result = [candidate_negative_list[i] for i in sample_indices]
-        # print("sample indices is:", sample_indices)
         user_negative_list.append(sample_result)
     return user_negative_list
 
@@ -200,29 +199,32 @@ def train_test_split(data, test_ratio=0.4, shuffle=True, ensure_positive=False):
 
 
 def prepare_topk(train_data, test_data,
-                 n_user: int, n_item: int, n_sample_user=None):
+                 user_num, item_num, sample_user_num=None):
     """
     准备用于topk评估的数据
     :param train_data: 训练集数据，有三列，分别是user_id, item_id, label
     :param test_data: 测试集数据，有三列，分别是user_id, item_id, label
-    :param n_user: 用户数量
-    :param n_item: 物品数量
-    :param n_sample_user: 用户取样数量，为None则表示采样所有用户
+    :param user_num: 用户数量
+    :param item_num: 物品数量
+    :param sample_user_num: 用户取样数量，为None则表示采样所有用户
     :return: 用于topk评估的数据，类型为TopkData，其包括在测试集里每个用户的（可推荐物品集合）与（有行为物品集合）
     """
-    if n_sample_user is None or n_sample_user > n_user:
-        n_sample_user = n_user
+    if sample_user_num is None or sample_user_num > user_num:
+        sample_user_num = user_num
 
-    user_set = np.random.choice(range(n_user), n_sample_user, False)
+    user_set = np.random.choice(range(user_num), sample_user_num, False)
 
     def get_user_item_set(data, only_positive=False):
-        user_item_set = {user_id: set() for user_id in user_set}
+        # 如果only_positive为true
+        # 将每个用户的item构建为一个set
+        user_item_set = defaultdict(set)
         for user_id, item_id, label in data:
             if user_id in user_set and (not only_positive or label == 1):
                 user_item_set[user_id].add(item_id)
         return user_item_set
-
-    test_user_item_set = {user_id: set(range(n_item)) - item_set
+    # 获取测试集的user_item_set
+    test_user_item_set = {user_id: set(range(item_num)) - item_set
                           for user_id, item_set in get_user_item_set(train_data).items()}
+    # 获取用户的正样本集合
     test_user_positive_item_set = get_user_item_set(test_data, only_positive=True)
     return test_user_item_set, test_user_positive_item_set
