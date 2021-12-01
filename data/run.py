@@ -1,7 +1,7 @@
 '''
 Author: your name
 Date: 2021-11-29 20:54:59
-LastEditTime: 2021-12-01 22:49:47
+LastEditTime: 2021-12-01 23:16:33
 LastEditors: Please set LastEditors
 Description: 打开koroFileHeader查看配置 进行设置: https://github.com/OBKoro1/koro1FileHeader/wiki/%E9%85%8D%E7%BD%AE
 FilePath: /recommend_system_castle/data/run.py
@@ -54,20 +54,20 @@ print("user num is:", user_num)
 print("item num is:", item_num)
 with open(train_file_path, "w") as f:
     for data in tqdm(train_data):
-        f.write(data)
+        f.write(str(data))
         f.write("\n")
 
 with open(test_file_path, "w") as f:
     for data in tqdm(test_data):
-        f.write(data)
+        f.write(str(data))
         f.write("\n")
 
 with open(user_item_set_file_path, "w") as f:
     for data in test_user_item_set:
-        f.write(data)
+        f.write(str(data))
         f.write("\n")
 
 with open(user_positive_item_set, "w") as f:
     for data in test_user_positive_item_set:
-        f.write(data)
+        f.write(str(data))
         f.write("\n")
