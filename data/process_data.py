@@ -28,6 +28,7 @@ def process_data(
     :param shuffle_before_split: 切分前是否对数据集随机顺序
     :param topk_sample_user: 用来计算TopK指标时用户采样数量，为None则表示采样所有用户
     :return: 用户数量，物品数量，训练集，测试集，用于TopK评估数据
+    @rtype: object
     """
     # 读取输入数据
     dataset = read_from_input_data(input_file_path)
@@ -44,18 +45,24 @@ def process_data(
     train_data, test_data = train_test_split(
         data, split_test_ratio, shuffle_before_split, split_ensure_positive
     )
-    # TODO topk_data作用未知
     test_user_item_set, test_user_positive_item_set = prepare_topk(
         train_data, test_data, user_num, item_num, topk_sample_user
     )
+    data_info_dict = generate_user_info_dict(user_num, item_num)
     return (
-        user_num,
-        item_num,
+        data_info_dict,
         train_data,
         test_data,
         test_user_item_set,
         test_user_positive_item_set,
     )
+
+
+def generate_user_info_dict(user_num, item_num):
+    data_info_dict = dict()
+    data_info_dict["user_num"] = user_num
+    data_info_dict["item_num"] = item_num
+    return data_info_dict
 
 
 def read_from_input_data(input_file_path):
@@ -247,9 +254,10 @@ def prepare_topk(train_data, test_data, user_num, item_num, sample_user_num=None
     :param sample_user_num: 用户取样数量，为None则表示采样所有用户
     :return: 用于topk评估的数据，类型为TopkData，其包括在测试集里每个用户的（可推荐物品集合）与（有行为物品集合）
     """
+    # 对用户进行采样， 只取TOPK 用户， 如果没有配置这个值， 或者值过大， 就取当前用户的数目
     if sample_user_num is None or sample_user_num > user_num:
         sample_user_num = user_num
-
+    # 从用户列表中随机抽取sample_user_num个用户
     user_set = np.random.choice(range(user_num), sample_user_num, False)
 
     def get_user_item_set(data, only_positive=False):
@@ -262,10 +270,12 @@ def prepare_topk(train_data, test_data, user_num, item_num, sample_user_num=None
         return user_item_set
 
     # 获取测试集的user_item_set
+    # key: user_id value: item集合， 所有item中排除掉所选择的样本， 正样本一定是会被排除掉的。
+    # 对非正样本， 如果only_positive为False, 也会被排除掉; 反之， 可以作为负样本出现
     test_user_item_set = {
         user_id: set(range(item_num)) - item_set
         for user_id, item_set in get_user_item_set(train_data).items()
     }
-    # 获取用户的正样本集合
+    # test集合， 只有正样本， 没有负样本
     test_user_positive_item_set = get_user_item_set(test_data, only_positive=True)
     return test_user_item_set, test_user_positive_item_set
