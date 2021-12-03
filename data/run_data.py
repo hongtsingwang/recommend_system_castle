@@ -47,7 +47,7 @@ negative_sample_method = "popular"
 split_test_ratio = 0.4
 # 是否打乱重排
 shuffle_before_split = True
-split_ensure_positive = True
+split_ensure_positive = False
 topk_sample_user = 100000
 
 
@@ -65,12 +65,14 @@ data_info_dict, train_data, test_data, test_user_item_set, test_user_positive_it
 with open(data_info_file_path, "wb") as f:
     pickle.dump(data_info_dict, f, pickle.HIGHEST_PROTOCOL)
 
+
 with open(train_file_path, "w") as f:
     for data in tqdm(train_data):
         data = [str(i) for i in data]
         user_id, item_id, label = data
         f.write("\t".join([user_id, item_id, label]))
         f.write("\n")
+
 
 with open(test_file_path, "w") as f:
     for data in tqdm(test_data):

@@ -31,8 +31,10 @@ def process_data(
     @rtype: object
     """
     # 读取输入数据
+    print("开始读取输入数据")
     dataset = read_from_input_data(input_file_path)
     # 根据movie lens数据， 制作负样本
+    print("开始生成负样本")
     data = generate_negative_sample(
         dataset,
         negative_sample_ratio,
@@ -40,14 +42,19 @@ def process_data(
         negative_sample_method,
     )
     # 数据处理, 稀疏值处理等
+    print("数据整理")
     data, user_num, item_num, _, _ = neaten_id(data)
     # 划分训练集和样本集
+    print("训练集和样本集的划分")
     train_data, test_data = train_test_split(
         data, split_test_ratio, shuffle_before_split, split_ensure_positive
     )
-    test_user_item_set, test_user_positive_item_set = prepare_topk(
-        train_data, test_data, user_num, item_num, topk_sample_user
-    )
+    # # 注释掉他们的原因是不知道他们将来会怎么使用， 等到需要使用的时候， 再将他们打开吧。@
+    # test_user_item_set, test_user_positive_item_set = prepare_topk(
+    #     train_data, test_data, user_num, item_num, topk_sample_user
+    # )
+    test_user_item_set = {}
+    test_user_positive_item_set = {}
     data_info_dict = generate_user_info_dict(user_num, item_num)
     return (
         data_info_dict,
@@ -220,28 +227,30 @@ def train_test_split(data, test_ratio=0.4, shuffle=True, ensure_positive=False):
     """
     if shuffle:
         random.shuffle(data)
-    n_test = int(len(data) * test_ratio)
-    test_data, train_data = data[:n_test], data[n_test:]
-
-    if ensure_positive:
-        # 所有用户ID列表 - 有正样本的用户ID列表
-        user_set = {d[0] for d in data} - {
-            user_id for user_id, _, label in train_data if label == 1
-        }
-        if len(user_set) > 0:
-            print(
-                "警告：为了确保训练集数据每个用户都有正样例，%d(%f%%)条数据从测试集随机插入训练集"
-                % (len(user_set), 100 * len(user_set) / len(data))
-            )
-        print("开始进行训练数据和测试数据的拆分")
-        i = len(test_data) - 1
-        while len(user_set) > 0:
-            assert i >= 0, "无法确保训练集每个用户都有正样例，因为存在没有正样例的用户：" + str(user_set)
-            if test_data[i][0] in user_set and test_data[i][2] == 1:
-                user_set.remove(test_data[i][0])
-                train_data.insert(random.randint(0, len(train_data)), test_data.pop(i))
-            i -= 1
-        print("训练数据和测试数据拆分完毕")
+    test_num = int(len(data) * test_ratio)
+    test_data, train_data = data[:test_num], data[test_num:]
+    # # 考虑一种极端情况, 某个用户， 在训练集合里面没有出现正样本， 但在测试集里面有正样本， 那么模型没有见过该用户的正样本， 自然难以将
+    # # 这个用户的embedding训练好， 那么把这条数据从测试集中移动到训练集中来
+    # # 这个考虑的挺全面的， 但是数据成本过高， 暂时注释掉了
+    # if ensure_positive:
+    #     # 所有用户ID列表 - 有正样本的用户ID列表
+    #     user_set = {d[0] for d in data} - {
+    #         user_id for user_id, _, label in train_data if label == 1
+    #     }
+    #     if len(user_set) > 0:
+    #         print(
+    #             "警告：为了确保训练集数据每个用户都有正样例，%d(%f%%)条数据从测试集随机插入训练集"
+    #             % (len(user_set), 100 * len(user_set) / len(data))
+    #         )
+    #     print("开始进行训练数据和测试数据的拆分")
+    #     i = len(test_data) - 1
+    #     while len(user_set) > 0:
+    #         assert i >= 0, "无法确保训练集每个用户都有正样例，因为存在没有正样例的用户：" + str(user_set)
+    #         if test_data[i][0] in user_set and test_data[i][2] == 1:
+    #             user_set.remove(test_data[i][0])
+    #             train_data.insert(random.randint(0, len(train_data)), test_data.pop(i))
+    #         i -= 1
+    #     print("训练数据和测试数据拆分完毕")
     return train_data, test_data
 
 

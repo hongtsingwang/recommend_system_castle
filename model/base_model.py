@@ -1,7 +1,9 @@
 # coding=utf-8
 
+from tensorflow.data.dataset import from_tensor_slices
 from tensorflow.keras.optimizers import SGD, Adam
 from tensorflow.keras.utils import plot_model
+from tensorflow.keras.callbacks import TensorBoard
 
 
 class BaseModel(object):
@@ -13,6 +15,7 @@ class BaseModel(object):
         epochs=1000,
         optimizer="SGD",
         loss="mean_squared_error",
+        tb_log_path=None,
         metrics=None,
     ) -> None:
         """[所有模型的基类]
@@ -32,6 +35,7 @@ class BaseModel(object):
         self.metrics = metrics
         self.batch_size = batch_size
         self.test_batch_size = test_batch_size
+        self.tb_log_path = tb_log_path
         self.optimizer = self.get_optimizer(optimizer)
         # 构建模型
         self.model = self.build_model()
@@ -66,6 +70,11 @@ class BaseModel(object):
         """
         self.model.compile(self.optimizer, loss=self.loss, metrics=self.metrics)
 
+    def generate_data_set(self, train_data, test_data):
+
+        train_data_set =
+
+
     def train(self, x_data, y_data):
         """模型训练
 
@@ -74,6 +83,8 @@ class BaseModel(object):
             y_data ([list]): label集合
             epochs (int, optional): [训练轮数]. Defaults to 10000.
         """
+        tb_callback = TensorBoard(log_dir=self.tb_log_path, write_graph=True, write_grads=True, histogram_freq=1,
+                                  update_freq="epoch")
         self.model.fit(
             x=x_data, y=y_data, epochs=self.epochs, batch_size=self.batch_size
         )

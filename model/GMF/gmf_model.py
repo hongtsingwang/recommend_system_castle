@@ -26,8 +26,9 @@ class GmfModel(BaseModel):
         self.dim = dim
         self.l2 = l2(l2_parameter)
         self.model_name = "gmf_model"
+        self.tb_log_path = "./gmf_model.log"
         super(GmfModel, self).__init__(
-            lr=lr, epochs=epochs, optimizer=optimizer, loss=loss
+            lr=lr, epochs=epochs, optimizer=optimizer, loss=loss, tb_log_path=self.tb_log_path
         )
 
     def build_model(self):
