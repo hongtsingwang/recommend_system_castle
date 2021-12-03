@@ -80,11 +80,15 @@ with open(test_file_path, "w") as f:
         f.write("\n")
 
 with open(user_item_set_file_path, "w") as f:
-    for data in test_user_item_set:
-        f.write(str(data))
+    for key, value in test_user_item_set.items():
+        f.write(str(key))
+        f.write("\t")
+        f.write(str(value))
         f.write("\n")
 
 with open(user_positive_item_set, "w") as f:
-    for data in test_user_positive_item_set:
-        f.write(str(data))
+    for key, value in test_user_positive_item_set.items():
+        f.write(str(key))
+        f.write("\t")
+        f.write(str(value))
         f.write("\n")

@@ -233,7 +233,7 @@ def train_test_split(data, test_ratio=0.4, shuffle=True, ensure_positive=False):
                 "警告：为了确保训练集数据每个用户都有正样例，%d(%f%%)条数据从测试集随机插入训练集"
                 % (len(user_set), 100 * len(user_set) / len(data))
             )
-
+        print("开始进行训练数据和测试数据的拆分")
         i = len(test_data) - 1
         while len(user_set) > 0:
             assert i >= 0, "无法确保训练集每个用户都有正样例，因为存在没有正样例的用户：" + str(user_set)
@@ -241,6 +241,7 @@ def train_test_split(data, test_ratio=0.4, shuffle=True, ensure_positive=False):
                 user_set.remove(test_data[i][0])
                 train_data.insert(random.randint(0, len(train_data)), test_data.pop(i))
             i -= 1
+        print("训练数据和测试数据拆分完毕")
     return train_data, test_data
 
 
