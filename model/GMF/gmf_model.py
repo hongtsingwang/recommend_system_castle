@@ -1,12 +1,14 @@
 # coding=utf-8
 
+import sys
 import tensorflow as tf
 from tensorflow import int32
 from tensorflow.keras import Model
 from tensorflow.keras.regularizers import l2
 from tensorflow.keras.layers import Input, Embedding, Multiply, Dense
 
-from model.base_model import BaseModel
+sys.path.append("../")
+from base_model import BaseModel
 
 
 class GmfModel(BaseModel):

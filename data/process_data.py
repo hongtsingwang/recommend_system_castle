@@ -65,6 +65,15 @@ def process_data(
     )
 
 
+def write_data_to_file(file_path, input_data):
+    with open(file_path, "w") as f:
+        for data in tqdm(input_data):
+            data = [str(i) for i in data]
+            user_id, item_id, label = data
+            f.write("\t".join([user_id, item_id, label]))
+            f.write("\n")
+
+
 def generate_user_info_dict(user_num, item_num):
     data_info_dict = dict()
     data_info_dict["user_num"] = user_num

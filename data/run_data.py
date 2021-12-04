@@ -5,7 +5,7 @@ import pickle
 
 from tqdm import tqdm
 
-from process_data import process_data
+from process_data import process_data, write_data_to_file
 
 # 是否为DEBUG模式
 debug_mode = False
@@ -66,20 +66,9 @@ with open(data_info_file_path, "wb") as f:
     pickle.dump(data_info_dict, f, pickle.HIGHEST_PROTOCOL)
 
 
-with open(train_file_path, "w") as f:
-    for data in tqdm(train_data):
-        data = [str(i) for i in data]
-        user_id, item_id, label = data
-        f.write("\t".join([user_id, item_id, label]))
-        f.write("\n")
+write_data_to_file(train_file_path, train_data)
+write_data_to_file(test_file_path, test_data)
 
-
-with open(test_file_path, "w") as f:
-    for data in tqdm(test_data):
-        data = [str(i) for i in data]
-        user_id, item_id, label = data
-        f.write("\t".join([user_id, item_id, label]))
-        f.write("\n")
 
 with open(user_item_set_file_path, "w") as f:
     for key, value in test_user_item_set.items():
