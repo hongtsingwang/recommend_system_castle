@@ -1,0 +1,19 @@
+# coding=utf-8
+
+from sklearn.datasets import load_breast_cancer
+from sklearn.model_selection import train_test_split
+
+from lr import LrModel
+
+# 载入数据
+breast_cancer_data = load_breast_cancer()
+# 模型初始化，配置参数
+units_num = len(breast_cancer_data.feature_names)
+epochs = 1000
+batch_size = 8
+lr = 0.001
+lr_model = LrModel(units_num=units_num, epochs=epochs, batch_size=batch_size, lr=lr)
+X_train, X_test, y_train, y_test = train_test_split(breast_cancer_data.data, breast_cancer_data.target, test_size=0.2,
+                                                    random_state=42, stratify=breast_cancer_data.target)
+lr_model.compile()
+lr_model.train(x_data=X_train, y_data=y_train, validation_data=(X_test, y_test))

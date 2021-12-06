@@ -1,7 +1,6 @@
 # coding=utf-8
 
 import tensorflow as tf
-from tensorflow.data.dataset import from_tensor_slices
 from tensorflow.keras.optimizers import SGD, Adam
 from tensorflow.keras.utils import plot_model
 from tensorflow.keras.callbacks import TensorBoard
@@ -71,31 +70,37 @@ class BaseModel(object):
         """
         self.model.compile(self.optimizer, loss=self.loss, metrics=self.metrics)
 
-
-    def generate_data_set(self, train_data, test_data, batch_size):
+    @staticmethod
+    def generate_data_set(train_data, test_data, batch_size):
         def to_tensor(data):
             user_id_list = tf.constant([item[0] for item in data])
             item_id_list = tf.constant([item[1] for item in data])
             label_list = tf.constant([item[2] for item in data])
             return {"user_id": user_id_list, 'item_id': item_id_list}, label_list
-        train_data_set = from_tensor_slices().shuffle(len(train_data)).batch(batch_size)
-        test_data_set = from_tensor_slices().batch(batch_size)
+        train_data = to_tensor(train_data)
+        test_data = to_tensor(test_data)
+        train_data_set = tf.data.Dataset.from_tensor_slices(train_data).shuffle(len(train_data)).batch(batch_size)
+        test_data_set = tf.data.Dataset.from_tensor_slices(test_data).batch(batch_size)
         return train_data_set, test_data_set
 
-
-    def train(self, x_data, y_data):
+    def train(self, x_data, y_data, validation_data=None):
         """模型训练
 
         Args:
             x_data ([list]): 输入特征集合
             y_data ([list]): label集合
-            epochs (int, optional): [训练轮数]. Defaults to 10000.
         """
         tb_callback = TensorBoard(log_dir=self.tb_log_path, write_graph=True, write_grads=True, histogram_freq=1,
                                   update_freq="epoch")
-        self.model.fit(
-            x=x_data, y=y_data, epochs=self.epochs, batch_size=self.batch_size
-        )
+        if not validation_data:
+            self.model.fit(
+                x=x_data, y=y_data, epochs=self.epochs, batch_size=self.batch_size, callbacks=[tb_callback]
+            )
+        else:
+            self.model.fit(
+                x=x_data, y=y_data, epochs=self.epochs, batch_size=self.batch_size, callbacks=[tb_callback],
+                validation_data=validation_data
+            )
 
     def predict(self, input_data):
         """模型预测

@@ -17,7 +17,15 @@
 # Dataset
 
 - MovieLens-20m
-- [下载地址](https://grouplens.org/datasets/movielens/20m/)
+  - [下载地址](https://grouplens.org/datasets/movielens/20m/)
+
+- breast_cancer
+  - sklearn中标准乳腺癌数据
+  - [数据说明](https://scikit-learn.org/stable/modules/generated/sklearn.datasets.load_breast_cancer.html?highlight=breast_cancer)
+  - 通过breast_cancer_data.feature_names查看30个feature的具体说明
+  - target_names:
+    - 'malignant': 恶性的
+    - 'benign': 良性的
 
 # Algorithm List
 
