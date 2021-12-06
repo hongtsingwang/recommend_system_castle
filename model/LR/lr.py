@@ -23,13 +23,15 @@ class LrModel(BaseModel):
         metrics="accuracy",
         bias_regularizer=0.01,
         kernel_regularizer=0.02,
+        model_name="lr",
         tb_log_path="./lr_model"
     ) -> None:
         self.units_num = units_num
         self.bias_regularizer = bias_regularizer
         self.kernel_regularizer = kernel_regularizer
         super(LrModel, self).__init__(
-            lr=lr, epochs=epochs, optimizer=optimizer, loss=loss, metrics=metrics, batch_size=batch_size, tb_log_path=tb_log_path
+            lr=lr, epochs=epochs, optimizer=optimizer, loss=loss, metrics=metrics, batch_size=batch_size,
+            tb_log_path=tb_log_path, model_name=model_name
         )
 
     def build_model(self):

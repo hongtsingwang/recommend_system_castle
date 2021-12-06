@@ -1,6 +1,9 @@
 # coding=utf-8
 
+import os
 import tensorflow as tf
+
+from datetime import datetime
 from tensorflow.keras.optimizers import SGD, Adam
 from tensorflow.keras.utils import plot_model
 from tensorflow.keras.callbacks import TensorBoard
@@ -17,6 +20,7 @@ class BaseModel(object):
         loss="mean_squared_error",
         tb_log_path=None,
         metrics=None,
+        model_name=None
     ) -> None:
         """[所有模型的基类]
 
@@ -33,12 +37,15 @@ class BaseModel(object):
         self.loss = loss
         self.epochs = epochs
         self.metrics = metrics
+        self.model_name = model_name
         self.batch_size = batch_size
         self.test_batch_size = test_batch_size
-        self.tb_log_path = tb_log_path
+        self.tb_log_path = os.path.join(tb_log_path, datetime.now().strftime("%Y%m%d_%H%M%S"))
         self.optimizer = self.get_optimizer(optimizer)
         # 构建模型
         self.model = self.build_model()
+        if not os.path.isdir(self.tb_log_path):
+            os.makedirs(self.tb_log_path)
 
     def get_optimizer(self, optimizer_str):
         """[根据输入参数， 选择合适的优化器]
@@ -63,7 +70,7 @@ class BaseModel(object):
     def build_model(self):
         """模型框架搭建, 不同模型应该有自己的构造模型框架的方法, 这里只是定义一下
         """
-        pass
+        return None
 
     def compile(self):
         """模型编译
@@ -120,3 +127,6 @@ class BaseModel(object):
     def get_model_info(self):
         print(self.model.summary())
         plot_model(self.model, to_file=self.model_name + ".png", show_shapes=True)
+
+    def save_model(self, output_path):
+        self.model.save(output_path)
