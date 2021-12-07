@@ -2,11 +2,10 @@
 
 import sys
 import tensorflow as tf
-import tensorflow.kears.backend as K
+import tensorflow.keras.backend as K
 from tensorflow.keras import Model
 from tensorflow.keras.regularizers import l1, l2
-from keras.layers import Activation
-from tensorflow.keras.layers import Input, Dense, Layer, Add, Reshape
+from tensorflow.keras.layers import Input, Dense, Layer, Add, Reshape, Activation
 
 sys.path.append("..")
 from base_model import BaseModel
@@ -37,6 +36,16 @@ class CrossLayer(Layer):
 
     def compute_output_shape(self, input_shape):
         return (input_shape[0], self.output_dim)
+    
+    def get_config(self):
+        config = super().get_config().copy()
+        config.update({
+            'field_dict': self.field_dict,
+            'field_dim': self.field_dim,
+            'input_dim': self.input_dim,
+            'output_dim': self.output_dim,
+        })
+        return config
 
 class FfmModel(BaseModel):
     def __init__(
@@ -50,8 +59,8 @@ class FfmModel(BaseModel):
         metrics="binary_accuracy",
         # bias_regularizer=0.01,
         # kernel_regularizer=0.02,
-        model_name="lr",
-        tb_log_path="./lr_model",
+        model_name="ffm",
+        tb_log_path="./ffm_model",
         field_dim=None,
         output_dim=30,
         field_dict = None

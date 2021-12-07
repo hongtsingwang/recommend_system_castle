@@ -4,8 +4,7 @@ import sys
 import tensorflow.keras.backend as K
 from tensorflow.keras import Model
 from tensorflow.keras.regularizers import l1, l2
-from tensorflow.keras.layers import Activation
-from tensorflow.keras.layers import Input, Dense, Layer, Add
+from tensorflow.keras.layers import Input, Dense, Layer, Add, Activation
 
 sys.path.append("..")
 from base_model import BaseModel
@@ -38,6 +37,7 @@ class CrossLayer(Layer):
             'output_dim': self.output_dim,
         })
         return config
+
 class FmModel(BaseModel):
     def __init__(
         self,
