@@ -10,6 +10,7 @@ from tensorflow.keras.layers import Input, Dense, Layer, Add, Reshape, Activatio
 sys.path.append("..")
 from base_model import BaseModel
 
+
 class CrossLayer(Layer):
     def __init__(self, field_dict, field_dim, input_dim, output_dim=30,  **kwargs):
         self.field_dict = field_dict
@@ -35,7 +36,7 @@ class CrossLayer(Layer):
         return self.field_cross
 
     def compute_output_shape(self, input_shape):
-        return (input_shape[0], self.output_dim)
+        return input_shape[0], self.output_dim
     
     def get_config(self):
         config = super().get_config().copy()
@@ -46,6 +47,7 @@ class CrossLayer(Layer):
             'output_dim': self.output_dim,
         })
         return config
+
 
 class FfmModel(BaseModel):
     def __init__(
@@ -63,7 +65,7 @@ class FfmModel(BaseModel):
         tb_log_path="./ffm_model",
         field_dim=None,
         output_dim=30,
-        field_dict = None
+        field_dict=None
     ) -> None:
         self.units_num = units_num
         self.field_dim = field_dim
@@ -86,6 +88,7 @@ class FfmModel(BaseModel):
             # bias_regularizer=l2(self.bias_regularizer),
             # kernel_regularizer=l1(self.kernel_regularizer)
         )(inputs)
+        print(self.field_dict, self.field_dim, self.units_num, self.output_dim)
         cross_part = CrossLayer(self.field_dict, self.field_dim, self.units_num, self.output_dim)(inputs)
         cross_part = Reshape((1,))(cross_part)
         add_layer = Add()([linear_part, cross_part])
