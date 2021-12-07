@@ -29,7 +29,9 @@
 
 # Algorithm List
 
-- GMF
+- LR
+- FM
+- FFM
 
 # License
 
