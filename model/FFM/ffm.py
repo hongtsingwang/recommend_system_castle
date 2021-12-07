@@ -10,6 +10,11 @@ from tensorflow.keras.layers import Input, Dense, Layer, Add, Reshape, Activatio
 sys.path.append("..")
 from base_model import BaseModel
 
+# 注: keras实现FFM模型存在一些问题， 提示tf.function-decorated function tried to create variables on non-first call
+# 目前暂无解决办法， 这个代码仅作为理解FFM模型所做的练习。 所以加了下面这行代码， 没有这行代码会报错。 但加了这行， 运行速度很慢， 无法在生产环
+# 境之中使用
+tf.config.experimental_run_functions_eagerly(True)
+
 
 class CrossLayer(Layer):
     def __init__(self, field_dict, field_dim, input_dim, output_dim=30,  **kwargs):
@@ -20,18 +25,20 @@ class CrossLayer(Layer):
         super(CrossLayer, self).__init__(**kwargs)
 
     def build(self, input_shape):
+        # input_shape is: batch_num X feature_num
         self.kernel = self.add_weight(name='kernel', 
                                       shape=(self.input_dim, self.field_dim, self.output_dim),
                                       initializer='glorot_uniform',
                                       trainable=True)
+        # shape is: (self.input_dim, self.field_dim, self.output_dim)
         super(CrossLayer, self).build(input_shape)
 
     def call(self, x):
         self.field_cross = K.variable(0, dtype='float32')
         for i in range(self.input_dim):
-            for j in range(i+1, self.input_dim):
+            for j in range(i + 1, self.input_dim):
                 weight = tf.math.reduce_sum(tf.math.multiply(self.kernel[i, self.field_dict[j]], self.kernel[j, self.field_dict[i]]))
-                value = tf.math.multiply(weight, tf.math.multiply(x[:,i], x[:,j]))
+                value = tf.math.multiply(weight, tf.math.multiply(x[:, i], x[:, j]))
                 self.field_cross = tf.math.add(self.field_cross, value)
         return self.field_cross
 
@@ -88,7 +95,6 @@ class FfmModel(BaseModel):
             # bias_regularizer=l2(self.bias_regularizer),
             # kernel_regularizer=l1(self.kernel_regularizer)
         )(inputs)
-        print(self.field_dict, self.field_dim, self.units_num, self.output_dim)
         cross_part = CrossLayer(self.field_dict, self.field_dim, self.units_num, self.output_dim)(inputs)
         cross_part = Reshape((1,))(cross_part)
         add_layer = Add()([linear_part, cross_part])

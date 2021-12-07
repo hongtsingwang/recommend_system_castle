@@ -6,15 +6,18 @@ from sklearn.model_selection import train_test_split
 from ffm import FfmModel
 
 # 载入数据
-field_dict = {i: i//5 for i in range(30)}
-field_dim = 6
+# 获取每个feature所对应的域
 breast_cancer_data = load_breast_cancer()
 # 模型初始化，配置参数
 units_num = len(breast_cancer_data.feature_names)
+# 假定一个域有5个元素
+field_dim = units_num // 5
+# 获取每个feature对应的映射关系
+field_dict = {i: i//5 for i in range(30)}
 epochs = 10
 batch_size = 8
 lr = 0.001
-output_path = "./fm_model.h5"
+output_path = "./ffm_model.h5"
 ffm_model = FfmModel(
     units_num=units_num, epochs=epochs, batch_size=batch_size, lr=lr, field_dict=field_dict, field_dim=field_dim
 )

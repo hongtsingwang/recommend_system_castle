@@ -99,6 +99,7 @@ class BaseModel(object):
         """
         tb_callback = TensorBoard(log_dir=self.tb_log_path, write_graph=True, write_grads=True, histogram_freq=1,
                                   update_freq="epoch")
+
         if not validation_data:
             self.model.fit(
                 x=x_data, y=y_data, epochs=self.epochs, batch_size=self.batch_size, callbacks=[tb_callback]
@@ -125,6 +126,7 @@ class BaseModel(object):
         return result
 
     def get_model_info(self):
+        print("输出模型的框架")
         print(self.model.summary())
         plot_model(self.model, to_file=self.model_name + ".png", show_shapes=True)
 

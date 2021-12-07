@@ -23,12 +23,12 @@ class CrossLayer(Layer):
         super(CrossLayer, self).build(input_shape)
 
     def call(self, x):
-        a = K.pow(K.dot(x,self.kernel), 2)
+        a = K.pow(K.dot(x, self.kernel), 2)
         b = K.dot(K.pow(x, 2), K.pow(self.kernel, 2))
         return K.mean(a-b, 1, keepdims=True)*0.5
 
     def compute_output_shape(self, input_shape):
-        return (input_shape[0], self.output_dim)
+        return input_shape[0], self.output_dim
 
     def get_config(self):
         config = super().get_config().copy()
