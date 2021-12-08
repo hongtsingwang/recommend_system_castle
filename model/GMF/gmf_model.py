@@ -35,8 +35,8 @@ class GmfModel(BaseModel):
 
     def build_model(self):
         user_id = Input(shape=(), name="user_id", dtype=int32)
-        item_id = Input(shape=(), name="item_id", dtype=int32)(user_id)
-        user_embedding = Embedding(self.user_num, self.dim, embeddings_regularizer=l2)
+        item_id = Input(shape=(), name="item_id", dtype=int32)
+        user_embedding = Embedding(self.user_num, self.dim, embeddings_regularizer=l2)(user_id)
         item_embedding = Embedding(self.item_num, self.dim, embeddings_regularizer=l2)(item_id)
         multi_layer = Multiply(name="multiply_layer")([user_embedding, item_embedding])
         output_layer = Dense(1, activation="sigmoid", name="output_layer", kernel_regularizer=l2)(multi_layer)
